@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestão de Frota</title>
+<meta name="description" content="Viaturas, manutenções, inspeções e alertas da frota.">
+<meta name="theme-color" content="#17324f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frota">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* Layout: oficina — barra fixa em azul-asfalto com separadores, lista de "fichas" por viatura com faixa de estado à esquerda. */
+  :root{
+    --bg:#eef1f4; --surface:#ffffff; --surface2:#f6f8fa; --ink:#18212d; --muted:#5f6b7a; --line:#d9dfe6; --field:#c9d1db;
+    --brand:#17324f; --brand-ink:#ffffff; --brand-soft:#b9c8da; --accent:#e8a33d; --accent-ink:#1b1408; --focus:#2f6db3;
+    --red:#b8352a; --red-bg:#fbe9e7; --amber:#9a6208; --amber-bg:#fdf1dc; --green:#1d7a45; --green-bg:#e3f4ea; --grey:#6b7684; --grey-bg:#eceff2;
+    --plate-bg:#ffffff; --plate-ink:#111; --eu:#1f4fa8; --scrim:rgba(10,20,32,.5);
+    --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+    --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --bg:#0f151c; --surface:#18212b; --surface2:#1e2934; --ink:#e6ebf1; --muted:#9aa7b5; --line:#2a3644; --field:#364557;
+    --brand:#0b1824; --brand-ink:#f1f5f9; --brand-soft:#8fa4ba; --accent:#f0b354; --accent-ink:#1b1408; --focus:#6ea3e0;
+    --red:#ef7a6e; --red-bg:#3a1d1a; --amber:#f0b354; --amber-bg:#3a2c13; --green:#5fcf8f; --green-bg:#16301f; --grey:#9aa7b5; --grey-bg:#26313c;
+    --plate-bg:#f3f3f3; --plate-ink:#111; --eu:#2b5fc0; --scrim:rgba(0,0,0,.6); color-scheme:dark }}
+  :root[data-theme="dark"]{
+    --bg:#0f151c; --surface:#18212b; --surface2:#1e2934; --ink:#e6ebf1; --muted:#9aa7b5; --line:#2a3644; --field:#364557;
+    --brand:#0b1824; --brand-ink:#f1f5f9; --brand-soft:#8fa4ba; --accent:#f0b354; --accent-ink:#1b1408; --focus:#6ea3e0;
+    --red:#ef7a6e; --red-bg:#3a1d1a; --amber:#f0b354; --amber-bg:#3a2c13; --green:#5fcf8f; --green-bg:#16301f; --grey:#9aa7b5; --grey-bg:#26313c;
+    --plate-bg:#f3f3f3; --plate-ink:#111; --eu:#2b5fc0; --scrim:rgba(0,0,0,.6); color-scheme:dark }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-bottom:env(safe-area-inset-bottom,0px);min-height:100vh}
+  /* ecrã de entrada */
+  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--brand);
+    padding-block:calc(24px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .auth .box{background:var(--surface);border-radius:14px;padding:24px 22px;width:100%;max-width:400px;box-shadow:0 14px 40px rgba(0,0,0,.3)}
+  .auth .logo{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .auth .logo img{width:52px;height:52px;border-radius:12px}
+  .auth .logo b{font:700 26px/1 var(--display);text-transform:uppercase;letter-spacing:.5px;display:block}
+  .auth .logo span{color:var(--muted);font-size:13px}
+  .auth form{display:flex;flex-direction:column;gap:12px}
+  .auth .btn{justify-content:center;width:100%;padding:11px}
+  .auth .links{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}
+  .linkbtn{background:none;border:0;color:var(--focus);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
+  .auth .msg{font-size:14px;border-radius:8px;padding:10px 12px;background:var(--surface2)}
+  .auth .msg.err{background:var(--red-bg);color:var(--red)}
+  .who{margin-left:auto;font:400 12px var(--body);color:var(--brand-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .offline{background:var(--amber);color:var(--accent-ink);text-align:center;font-size:13px;font-weight:600;padding:4px 10px}
+  .acc{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .acc div{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:6px 10px}
+  .acc span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .inline{display:flex;gap:8px;flex-wrap:wrap}
+  .inline input{flex:1;min-width:0;flex-basis:200px}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+  header{background:var(--brand);color:var(--brand-ink);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;
+    padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .hwrap{max-width:1000px;margin:0 auto}
+  .brand{display:flex;align-items:baseline;gap:10px;padding-block:12px 2px}
+  .brand b{font:700 24px/1 var(--display);letter-spacing:.5px;text-transform:uppercase}
+  .brand span{color:var(--brand-soft);font-size:13px}
+  nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0 -8px}
+  nav::-webkit-scrollbar{display:none}
+  nav button{background:none;border:0;color:var(--brand-soft);padding:10px 10px 9px;font:600 15px var(--body);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+  nav button:hover{color:var(--brand-ink)}
+  nav button.on{color:var(--brand-ink);border-color:var(--accent)}
+  nav .n{background:var(--red);color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:5px;font-variant-numeric:tabular-nums}
+  main{max-width:1000px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  h2{font:700 20px/1.2 var(--display);text-transform:uppercase;letter-spacing:.6px;margin:26px 0 10px;text-wrap:balance}
+  .lead{color:var(--muted);margin:0 0 14px;max-width:65ch}
+  .muted{color:var(--muted)} small{font-size:12px}
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+  .stat{padding:14px 16px;border-left:1px solid var(--line);min-width:0}
+  .stat:first-child{border-left:0}
+  .stat .v{font:700 32px/1.05 var(--display);font-variant-numeric:tabular-nums}
+  .stat .l{color:var(--muted);font-size:13px}
+  .stat.red .v{color:var(--red)} .stat.amber .v{color:var(--amber)}
+  @media (max-width:640px){ .stats{grid-template-columns:1fr 1fr} .stat:nth-child(3){border-left:0} .stat:nth-child(n+3){border-top:1px solid var(--line)} }
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .search{flex:1;min-width:0;flex-basis:200px}
+  input,select,textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--field);border-radius:8px;background:var(--surface);color:var(--ink)}
+  textarea{min-height:64px;resize:vertical}
+  .btn{background:var(--brand);color:var(--brand-ink);border:1px solid var(--brand);border-radius:8px;padding:9px 14px;font:600 14px var(--body);cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{filter:brightness(1.15)}
+  .btn.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--field)}
+  .btn.danger{background:var(--surface);color:var(--red);border-color:var(--field)}
+  .btn.sm{padding:5px 10px;font-size:13px}
+  .btn:disabled{opacity:.55;cursor:default}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .chip{border:1px solid var(--field);background:var(--surface);color:var(--ink);border-radius:20px;padding:5px 12px;cursor:pointer;font:500 13px var(--body)}
+  .chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+  .item.red{border-left-color:var(--red)} .item.amber{border-left-color:var(--amber)} .item.green{border-left-color:var(--green)}
+  .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .row1 .grow{flex:1;min-width:0}
+  .ttl{font-weight:600}
+  .meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:4px;color:var(--muted);font-size:14px}
+  .when{margin-top:6px;font-variant-numeric:tabular-nums}
+  .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .num{font-variant-numeric:tabular-nums}
+  .plate{display:inline-flex;align-items:stretch;border:1.5px solid #1a1a1a;border-radius:4px;overflow:hidden;background:var(--plate-bg);color:var(--plate-ink);font:600 14px/1 var(--mono);letter-spacing:.6px;vertical-align:middle}
+  .plate i{background:var(--eu);color:#fff;font:600 9px/1 var(--body);font-style:normal;display:flex;align-items:flex-end;padding:3px 3px 2px}
+  .plate em{font-style:normal;padding:3px 7px}
+  .badge{border-radius:5px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap;letter-spacing:.2px}
+  .badge.red{background:var(--red-bg);color:var(--red)} .badge.amber{background:var(--amber-bg);color:var(--amber)}
+  .badge.green{background:var(--green-bg);color:var(--green)} .badge.grey{background:var(--grey-bg);color:var(--grey)}
+  .empty{color:var(--muted);padding:28px 18px;background:var(--surface);border-radius:var(--r);border:1px dashed var(--field)}
+  .empty b{color:var(--ink);display:block;font:700 18px var(--display);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .empty .actions{margin-top:14px}
+  .notice{background:var(--amber-bg);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;margin-top:12px;font-size:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .notice a{color:inherit;font-weight:600}
+  .notice .grow{flex:1;min-width:0}
+  .total{margin:0 2px 10px;font-weight:600;font-variant-numeric:tabular-nums}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+
+  .modal{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;z-index:20;
+    padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));
+    padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .sheet{background:var(--surface);border-radius:14px;width:100%;max-width:640px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .mhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .mhead h3{margin:0;font:700 20px/1.2 var(--display);text-transform:uppercase;letter-spacing:.4px;min-width:0}
+  .x{background:none;border:0;font-size:26px;line-height:1;cursor:pointer;color:var(--muted)}
+  #mform{padding:16px 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{min-width:0}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field small{display:block;color:var(--muted);margin-top:3px}
+  .field.full{grid-column:1/-1}
+  .checks{display:flex;flex-wrap:wrap;gap:6px}
+  .checks label{display:flex;align-items:center;gap:6px;border:1px solid var(--field);border-radius:8px;padding:6px 10px;font-weight:500;cursor:pointer;margin:0}
+  .checks input{width:auto}
+  .mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .confirm p{margin:0 0 4px}
+  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .2s;z-index:40;max-width:min(90vw,520px);pointer-events:none}
+  #toast.show{opacity:1} #toast.err{background:var(--red);color:#fff}
+  @media (max-width:560px){ .grid{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){ #toast{transition:none} }
+</style>
+</head>
+<body>
+
+<section id="auth" class="auth" hidden>
+  <div class="box">
+    <div class="logo"><img src="icon-192.png" alt=""><div><b id="authBrand">Gestão de Frota</b><span>manutenção · inspeções · alertas</span></div></div>
+    <div id="authBody"></div>
+  </div>
+</section>
+
+<div id="app" hidden>
+<header>
+  <div class="hwrap">
+    <div class="brand"><b id="brand">Gestão de Frota</b><span class="who" id="who"></span></div>
+    <nav id="tabs"></nav>
+  </div>
+</header>
+<div id="offline" class="offline" hidden>Sem internet. As alterações ficam guardadas no telemóvel e são enviadas quando voltar a ligação.</div>
+<main id="main">
+  <div class="empty"><b>A abrir a frota…</b>Viaturas, motoristas e alertas aparecem aqui assim que os dados carregarem.</div>
+</main>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+    <div class="mhead"><h3 id="mtitle"></h3><button class="x" type="button" aria-label="Fechar" onclick="closeModal()">×</button></div>
+    <form id="mform" autocomplete="off"></form>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<datalist id="dl-nomes"></datalist>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+// ================= DADOS (base de dados partilhada da app) =================
+let DB = null, D = null, TAB = 'painel', FORM = null, FILTRO = 'urgentes';
+const Q = {};
+const $ = s => document.querySelector(s);
+const COL = {Viaturas:'viaturas', Motoristas:'motoristas', Regras:'regras', Registos:'registos'};
+const FIELDS = {
+  Viaturas: ['matricula','marca','modelo','ano','tipo','kmAtual','kmData','motorista','estado','notas'],
+  Motoristas: ['nome','telefone','email','numCarta','viatura','estado','notas'],
+  Regras: ['ativo','alvoTipo','alvo','nome','categoria','tipo','proximaData','proximoKm','repetirMeses','repetirKm','avisarDias','avisarKm','notas'],
+  Registos: ['data','categoria','alvoTipo','alvo','descricao','km','custo','fornecedor','regraId','notas','criadoEm']
+};
+const NUMS = {Viaturas:['ano','kmAtual'], Motoristas:[], Regras:['proximoKm','repetirMeses','repetirKm','avisarDias','avisarKm'], Registos:['km','custo']};
+const RAW = {viaturas:[], motoristas:[], regras:[], registos:[], config:{}};
+const LOADED = new Set();
+
+function toNum(v){
+  if (v === '' || v === null || v === undefined) return '';
+  if (typeof v === 'number') return v;
+  let s = String(v).replace(/\s/g,'');
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g,'');
+  const n = Number(s.replace(',','.'));
+  return isNaN(n) ? '' : n;
+}
+function clean(entity, o){
+  const out = {};
+  FIELDS[entity].forEach(k => {
+    let v = o[k];
+    if (v === undefined || v === null) v = '';
+    if (NUMS[entity].includes(k)) v = toNum(v);
+    else v = String(v).trim();
+    out[k] = v;
+  });
+  if (entity === 'Viaturas') out.matricula = out.matricula.toUpperCase();
+  return out;
+}
+const newId = p => p + Date.now().toString(36).slice(-5).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
+const ref = (entity, id) => DB.collection(COL[entity]).doc(id);
+const norm = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g,'');
+function dbErr(e){
+  const c = e && e.code;
+  if (c === 'permission-denied') return new Error('Não tem permissão para esta alteração. Fale com o administrador da frota.');
+  if (c === 'unavailable') return new Error('Sem ligação. Verifique a internet e tente outra vez.');
+  return new Error((e && e.message) || String(e));
+}
+// Sem internet, o Firestore guarda a alteração no telemóvel e só confirma quando volta a ligação.
+// Por isso não se espera mais de 2,5 s: o ecrã já mostra a alteração; um erro tardio aparece como aviso.
+function W(p){
+  let tarde = false;
+  const q = Promise.resolve(p).catch(e => { throw dbErr(e); });
+  q.catch(e => { if (tarde) toast(e.message, true); });
+  return Promise.race([q, new Promise(r => setTimeout(() => { tarde = true; r(); }, 2500))]);
+}
+
+function validate(entity, o, id){
+  const list = {Viaturas:D.viaturas, Motoristas:D.motoristas, Regras:D.regras, Registos:D.registos}[entity].filter(x => x.id !== id);
+  if (entity === 'Viaturas'){
+    if (!o.matricula) throw new Error('A matrícula é obrigatória.');
+    if (list.some(x => norm(x.matricula) === norm(o.matricula))) throw new Error('Já existe uma viatura com a matrícula ' + o.matricula + '.');
+  }
+  if (entity === 'Motoristas'){
+    if (!o.nome) throw new Error('O nome é obrigatório.');
+    if (list.some(x => x.nome.toLowerCase() === o.nome.toLowerCase())) throw new Error('Já existe um motorista chamado ' + o.nome + '.');
+  }
+  if (entity === 'Regras'){
+    if (!o.nome) throw new Error('Dê um nome ao alerta.');
+    if (!o.alvo) throw new Error('Escolha a viatura ou o motorista.');
+    if (o.alvoTipo === 'Motorista') o.tipo = 'Data';
+    if (!o.tipo) o.tipo = 'Data';
+    if (o.tipo !== 'Km' && !o.proximaData) throw new Error('Indique a próxima data ou validade.');
+    if (o.tipo !== 'Data' && o.proximoKm === '') throw new Error('Indique aos quantos km é o próximo.');
+  }
+  if (entity === 'Registos'){
+    if (!o.data) throw new Error('Indique a data.');
+    if (!o.alvo) throw new Error('Escolha a viatura ou o motorista.');
+  }
+}
+
+async function renomear(tipo, antigo, novo){
+  if (!antigo || antigo === novo) return;
+  const jobs = [];
+  D.regras.filter(r => r.alvoTipo === tipo && r.alvo === antigo).forEach(r => jobs.push(ref('Regras', r.id).update({alvo:novo})));
+  D.registos.filter(r => r.alvoTipo === tipo && r.alvo === antigo).forEach(r => jobs.push(ref('Registos', r.id).update({alvo:novo})));
+  if (tipo === 'Viatura') D.motoristas.filter(m => m.viatura === antigo).forEach(m => jobs.push(ref('Motoristas', m.id).update({viatura:novo})));
+  else D.viaturas.filter(v => v.motorista === antigo).forEach(v => jobs.push(ref('Viaturas', v.id).update({motorista:novo})));
+  await W(Promise.all(jobs));
+}
+
+async function kmSeMaior(matricula, km){
+  const v = D.viaturas.find(x => x.matricula === matricula);
+  if (v && km !== '' && (v.kmAtual === '' || Number(km) > Number(v.kmAtual))) await W(ref('Viaturas', v.id).update({kmAtual:Number(km), kmData:D.hoje}));
+}
+
+const API = {
+  async saveRecord(entity, input){
+    const id = input.id || '';
+    const o = clean(entity, Object.assign({}, id ? D[COL[entity]].find(x => x.id === id) : {}, input));
+    validate(entity, o, id);
+    if (id){
+      const old = D[COL[entity]].find(x => x.id === id);
+      if (!old) throw new Error('Este registo já não existe (pode ter sido apagado).');
+      if (entity === 'Viaturas'){
+        await renomear('Viatura', old.matricula, o.matricula);
+        if (String(old.kmAtual) !== String(o.kmAtual)) o.kmData = D.hoje;
+      }
+      if (entity === 'Motoristas') await renomear('Motorista', old.nome, o.nome);
+      await W(ref(entity, id).set(o));
+    } else {
+      if (entity === 'Viaturas' && o.kmAtual !== '') o.kmData = D.hoje;
+      if (entity === 'Regras' && !o.ativo) o.ativo = 'Sim';
+      if (entity === 'Registos') o.criadoEm = new Date().toISOString();
+      await W(ref(entity, newId(entity[0])).set(o));
+    }
+    if (entity === 'Registos' && o.alvoTipo === 'Viatura') await kmSeMaior(o.alvo, o.km);
+  },
+  async saveRegras(o, alvos){
+    for (const a of alvos) await API.saveRecord('Regras', Object.assign({}, o, {id:'', alvo:a}));
+  },
+  async deleteRecord(entity, id){
+    const o = D[COL[entity]].find(x => x.id === id);
+    if (!o) return;
+    if (entity === 'Viaturas' || entity === 'Motoristas'){
+      const tipo = entity === 'Viaturas' ? 'Viatura' : 'Motorista', nome = entity === 'Viaturas' ? o.matricula : o.nome;
+      await W(Promise.all(D.regras.filter(r => r.alvoTipo === tipo && r.alvo === nome).map(r => ref('Regras', r.id).delete())));
+    }
+    await W(ref(entity, id).delete());
+  },
+  async atualizarKm(matricula, km){
+    const v = D.viaturas.find(x => x.matricula === matricula);
+    if (!v) throw new Error('Viatura não encontrada.');
+    if (toNum(km) === '') throw new Error('Indique os km.');
+    await W(ref('Viaturas', v.id).update({kmAtual:toNum(km), kmData:D.hoje}));
+  },
+  async registarExecucao(p){
+    const r = D.regras.find(x => x.id === p.regraId);
+    if (!r) throw new Error('Este alerta já não existe.');
+    await API.saveRecord('Registos', {
+      data:p.data || D.hoje, categoria:r.categoria, alvoTipo:r.alvoTipo, alvo:r.alvo,
+      descricao:r.nome + (p.descricao ? ' — ' + p.descricao : ''), km:p.km || '', custo:p.custo || '',
+      fornecedor:p.fornecedor || '', regraId:r.id, notas:p.notas || ''
+    });
+    const usaData = r.tipo !== 'Km', usaKm = r.tipo !== 'Data' && r.alvoTipo === 'Viatura';
+    const upd = {
+      proximaData: usaData ? (p.novaData || '') : r.proximaData,
+      proximoKm: usaKm ? toNum(p.novoKm) : r.proximoKm
+    };
+    upd.ativo = ((usaData && upd.proximaData) || (usaKm && upd.proximoKm !== '')) ? 'Sim' : 'Não';
+    await W(ref('Regras', r.id).update(upd));
+  },
+  async saveConfig(c){
+    await W(DB.doc('config/geral').set({nome:String(c.nome||'').trim(), diasAviso:toNum(c.diasAviso), kmAviso:toNum(c.kmAviso)}));
+  },
+  async saveAcesso(lista){
+    try { await DB.doc('config/acesso').set({emails:lista}); }
+    catch(e){ throw new Error(e && e.code === 'permission-denied' ? 'Só o administrador pode alterar quem tem acesso.' : dbErr(e).message); }
+  }
+};
+const call = (fn, ...a) => API[fn](...a);
+
+// ================= CÁLCULO DOS ALERTAS =================
+const ESTADOS = ['Vencido','A vencer','OK','Sem prazo'];
+const isSim = v => v === true || /^(sim|s|true|1)$/i.test(String(v).trim());
+function isoToDate(s){ const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
+function calcularAlertas(regras, viaturas, cfg){
+  const hoje = isoToDate(D.hoje), vmap = {};
+  viaturas.forEach(v => vmap[v.matricula] = v);
+  return regras.filter(r => isSim(r.ativo)).map(r => {
+    const tipo = r.tipo || 'Data', usaData = tipo !== 'Km', usaKm = tipo !== 'Data' && r.alvoTipo === 'Viatura';
+    const avD = r.avisarDias === '' || r.avisarDias === undefined ? cfg.diasAviso : Number(r.avisarDias);
+    const avK = r.avisarKm === '' || r.avisarKm === undefined ? cfg.kmAviso : Number(r.avisarKm);
+    let est = 3, dias = null, kmRest = null;
+    if (usaData && r.proximaData){
+      const d = isoToDate(r.proximaData);
+      if (d){ dias = Math.round((d - hoje) / 864e5); est = Math.min(est, dias < 0 ? 0 : dias <= avD ? 1 : 2); }
+    }
+    if (usaKm && r.proximoKm !== ''){
+      const v = vmap[r.alvo];
+      if (v && v.kmAtual !== ''){ kmRest = Number(r.proximoKm) - Number(v.kmAtual); est = Math.min(est, kmRest <= 0 ? 0 : kmRest <= avK ? 1 : 2); }
+    }
+    return Object.assign({}, r, {estado:ESTADOS[est], rank:est, dias, kmRest});
+  }).sort((a,b) => (a.rank - b.rank) || ((a.dias ?? 1e9) - (b.dias ?? 1e9)) || ((a.kmRest ?? 1e12) - (b.kmRest ?? 1e12)));
+}
+
+function refresh(){
+  if (LOADED.size < 5) return;
+  const c = RAW.config || {};
+  const cfg = {nome: c.nome || 'Gestão de Frota', diasAviso: c.diasAviso === '' || c.diasAviso === undefined ? 30 : Number(c.diasAviso), kmAviso: c.kmAviso === '' || c.kmAviso === undefined ? 1000 : Number(c.kmAviso)};
+  const pad = list => list.map(x => { const o = Object.assign({}, x); return o; });
+  D = {
+    viaturas: pad(RAW.viaturas), motoristas: pad(RAW.motoristas), regras: pad(RAW.regras),
+    registos: pad(RAW.registos).sort((a,b) => String(b.data).localeCompare(String(a.data)) || String(b.criadoEm||'').localeCompare(String(a.criadoEm||''))),
+    config: cfg, hoje: toISO(new Date())
+  };
+  ['viaturas','motoristas','regras','registos'].forEach(k => D[k].forEach(o => {
+    const ent = Object.keys(COL).find(e => COL[e] === k);
+    FIELDS[ent].forEach(f => { if (o[f] === undefined || o[f] === null) o[f] = ''; });
+  }));
+  D.alertas = calcularAlertas(D.regras, D.viaturas, cfg);
+  render();
+  notificar();
+}
+
+// ================= LIGAÇÃO AO FIREBASE E ENTRADA =================
+let AUTH = null, UNSUBS = [], ACESSO = [], NOTIFICADO = false, INSTALL_EVT = null;
+
+function init(){
+  const cfg = window.FIREBASE_CONFIG;
+  if (!window.firebase || !cfg || !cfg.apiKey || /COLE/i.test(cfg.apiKey)){
+    showAuth(`<div class="msg err">A app ainda não está ligada à base de dados. Preencha o ficheiro <b>config.js</b> com os dados do seu projeto Firebase (guia, passo 1).</div>`);
+    return;
+  }
+  firebase.initializeApp(cfg);
+  DB = firebase.firestore();
+  DB.enablePersistence({synchronizeTabs:true}).catch(() => {});
+  AUTH = firebase.auth();
+  AUTH.onAuthStateChanged(u => {
+    stopData();
+    if (!u) return loginView('login');
+    if (!u.emailVerified) return verifyView(u);
+    startData(u);
+  });
+}
+
+function showAuth(html){
+  $('#app').hidden = true; $('#auth').hidden = false;
+  $('#authBody').innerHTML = html;
+}
+function authErr(e){
+  const m = {
+    'auth/invalid-credential':'Email ou palavra-passe errados.', 'auth/wrong-password':'Email ou palavra-passe errados.',
+    'auth/user-not-found':'Não existe nenhuma conta com este email.', 'auth/invalid-email':'O email não é válido.',
+    'auth/email-already-in-use':'Já existe uma conta com este email. Use "Entrar".', 'auth/weak-password':'A palavra-passe tem de ter pelo menos 6 caracteres.',
+    'auth/too-many-requests':'Demasiadas tentativas. Espere uns minutos e tente outra vez.', 'auth/network-request-failed':'Sem internet. Verifique a ligação.'
+  };
+  return m[e && e.code] || (e && e.message) || String(e);
+}
+function loginView(mode, msg){
+  const t = {login:['Entrar','Entrar'], signup:['Criar conta','Criar conta'], reset:['Recuperar palavra-passe','Enviar email']}[mode];
+  showAuth(`
+    <form id="authForm" novalidate>
+      ${msg ? `<div class="msg">${msg}</div>` : ''}
+      <div class="field"><label for="a_email">Email</label><input id="a_email" type="email" autocomplete="email" required></div>
+      ${mode !== 'reset' ? `<div class="field"><label for="a_pass">Palavra-passe</label><input id="a_pass" type="password" autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}" required></div>` : ''}
+      ${mode === 'signup' ? `<div class="field"><label for="a_pass2">Repetir palavra-passe</label><input id="a_pass2" type="password" autocomplete="new-password" required></div>` : ''}
+      <div id="authMsg" class="msg err" hidden></div>
+      <button class="btn go" type="submit">${t[1]}</button>
+      <div class="links">
+        ${mode === 'login' ? `<button type="button" class="linkbtn" onclick="loginView('signup')">Criar conta</button><button type="button" class="linkbtn" onclick="loginView('reset')">Esqueci-me da palavra-passe</button>`
+                           : `<button type="button" class="linkbtn" onclick="loginView('login')">Voltar a entrar</button>`}
+      </div>
+    </form>`);
+  $('#authForm').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#a_email').value.trim(), pass = $('#a_pass') ? $('#a_pass').value : '';
+    const err = $('#authMsg'), btn = e.target.querySelector('[type=submit]');
+    err.hidden = true; btn.disabled = true;
+    try {
+      if (mode === 'login') await AUTH.signInWithEmailAndPassword(email, pass);
+      if (mode === 'signup'){
+        if (pass !== $('#a_pass2').value) throw {message:'As palavras-passe não coincidem.'};
+        const c = await AUTH.createUserWithEmailAndPassword(email, pass);
+        await c.user.sendEmailVerification();
+      }
+      if (mode === 'reset'){
+        await AUTH.sendPasswordResetEmail(email);
+        loginView('login', `Enviámos um email para ${esc(email)} com o link para criar uma nova palavra-passe.`);
+      }
+    } catch(x){ err.textContent = authErr(x); err.hidden = false; }
+    btn.disabled = false;
+  };
+}
+function verifyView(u){
+  showAuth(`
+    <div class="msg">Enviámos um email de confirmação para <b>${esc(u.email)}</b>. Abra-o, carregue no link e volte aqui. Veja também a pasta de spam.</div>
+    <div id="authMsg" class="msg err" hidden style="margin-top:12px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button type="button" class="btn go" id="vOk">Já confirmei</button>
+      <button type="button" class="btn ghost" id="vAgain">Reenviar email</button>
+      <button type="button" class="linkbtn" onclick="AUTH.signOut()">Usar outra conta</button>
+    </div>`);
+  $('#vOk').onclick = async () => {
+    await AUTH.currentUser.reload();
+    const cu = AUTH.currentUser;
+    if (cu.emailVerified){ await cu.getIdToken(true); startData(cu); }
+    else { $('#authMsg').textContent = 'O email ainda não foi confirmado.'; $('#authMsg').hidden = false; }
+  };
+  $('#vAgain').onclick = async () => {
+    try { await AUTH.currentUser.sendEmailVerification(); toastAuth('Email reenviado.'); }
+    catch(x){ $('#authMsg').textContent = authErr(x); $('#authMsg').hidden = false; }
+  };
+}
+function toastAuth(m){ const el = $('#authMsg'); el.textContent = m; el.className = 'msg'; el.hidden = false; }
+function noAccessView(u){
+  stopData();
+  showAuth(`
+    <div class="msg">A conta <b>${esc(u.email)}</b> ainda não tem acesso a esta frota.<br><br>Peça ao administrador para o adicionar em <b>Definições → Acesso da equipa</b>.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button type="button" class="btn go" onclick="startData(AUTH.currentUser)">Tentar outra vez</button>
+      <button type="button" class="linkbtn" onclick="AUTH.signOut()">Sair</button>
+    </div>`);
+}
+
+function stopData(){
+  UNSUBS.forEach(f => { try { f(); } catch(e){} });
+  UNSUBS = []; LOADED.clear(); D = null; NOTIFICADO = false;
+  Object.assign(RAW, {viaturas:[], motoristas:[], regras:[], registos:[], config:{}});
+}
+function startData(u){
+  stopData();
+  $('#auth').hidden = true; $('#app').hidden = false;
+  $('#who').textContent = u.email;
+  $('#main').innerHTML = '<div class="empty"><b>A abrir a frota…</b>Viaturas, motoristas e alertas aparecem aqui assim que os dados carregarem.</div>';
+  const fail = e => {
+    if (e && e.code === 'permission-denied') return noAccessView(u);
+    toast(dbErr(e).message, true);
+  };
+  ['viaturas','motoristas','regras','registos'].forEach(c =>
+    UNSUBS.push(DB.collection(c).onSnapshot(s => { RAW[c] = s.docs.map(d => Object.assign({}, d.data(), {id:d.id})); LOADED.add(c); refresh(); }, fail)));
+  UNSUBS.push(DB.doc('config/geral').onSnapshot(s => { RAW.config = s.exists ? (s.data() || {}) : {}; LOADED.add('config'); refresh(); }, fail));
+  UNSUBS.push(DB.doc('config/acesso').onSnapshot(s => { ACESSO = s.exists ? ((s.data() || {}).emails || []) : []; if (TAB === 'definicoes' && D) render(); }, () => {}));
+}
+
+// ---------- avisos no telemóvel ----------
+async function notificar(){
+  if (NOTIFICADO || !D || !('Notification' in window) || Notification.permission !== 'granted') return;
+  NOTIFICADO = true;
+  const urg = D.alertas.filter(a => a.rank <= 1);
+  if (!urg.length) return;
+  const key = 'frota-aviso-' + D.hoje;
+  try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch(e){}
+  const nV = urg.filter(a => a.rank === 0).length, nA = urg.length - nV;
+  const title = [nV ? nV + ' vencido(s)' : '', nA ? nA + ' a vencer' : ''].filter(Boolean).join(', ');
+  const body = urg.slice(0, 5).map(a => `${a.alvo}: ${a.nome}`).join('\n') + (urg.length > 5 ? `\n+ ${urg.length - 5} outro(s)` : '');
+  try {
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) reg.showNotification('Frota: ' + title, {body, icon:'icon-192.png', badge:'icon-192.png', tag:'frota-alertas'});
+    else new Notification('Frota: ' + title, {body, icon:'icon-192.png'});
+  } catch(e){}
+}
+async function ativarAvisos(){
+  if (!('Notification' in window)) return toast('Este navegador não suporta avisos. No iPhone, instale primeiro a app no ecrã principal.', true);
+  const p = await Notification.requestPermission();
+  if (p === 'granted'){ try { localStorage.removeItem('frota-aviso-' + D.hoje); } catch(e){} NOTIFICADO = false; notificar(); toast('Avisos ativados'); }
+  else toast('Os avisos foram bloqueados. Pode ativá-los nas definições do navegador.', true);
+  render();
+}
+
+// ---------- instalação e ligação ----------
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL_EVT = e; if (TAB === 'definicoes' && D) render(); });
+async function instalar(){
+  if (!INSTALL_EVT) return;
+  INSTALL_EVT.prompt();
+  await INSTALL_EVT.userChoice.catch(() => {});
+  INSTALL_EVT = null; render();
+}
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function ligacao(){ const o = $('#offline'); if (o) o.hidden = navigator.onLine; }
+window.addEventListener('online', ligacao); window.addEventListener('offline', ligacao);
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+// ================= INTERFACE =================
+const TABS = [['painel','Painel'],['viaturas','Viaturas'],['motoristas','Motoristas'],['alertas','Alertas'],['historico','Histórico'],['definicoes','Definições']];
+const TIPOS_VIATURA = ['Ligeiro de passageiros','Ligeiro de mercadorias','Pesado de mercadorias','Pesado de passageiros','Motociclo','Reboque','Máquina','Outro'];
+const CATEGORIAS = ['Manutenção','Inspeção','Reparação','Seguro','Imposto','Documento','Pneus','Equipamento','Combustível','Outro'];
+const PRESETS = {
+  'Inspeção periódica (IPO)': {categoria:'Inspeção',tipo:'Data',repetirMeses:12,avisarDias:30},
+  'Revisão / mudança de óleo': {categoria:'Manutenção',tipo:'Data e Km',repetirMeses:12,repetirKm:15000,avisarDias:30,avisarKm:1000},
+  'Seguro': {categoria:'Seguro',tipo:'Data',repetirMeses:12,avisarDias:30},
+  'IUC': {categoria:'Imposto',tipo:'Data',repetirMeses:12,avisarDias:30},
+  'Pneus': {categoria:'Pneus',tipo:'Km',repetirKm:40000,avisarKm:2000},
+  'Pastilhas de travão': {categoria:'Manutenção',tipo:'Km',repetirKm:30000,avisarKm:2000},
+  'Correia de distribuição': {categoria:'Manutenção',tipo:'Data e Km',repetirMeses:60,repetirKm:100000,avisarDias:60,avisarKm:3000},
+  'Extintor': {categoria:'Equipamento',tipo:'Data',repetirMeses:12,avisarDias:30},
+  'Tacógrafo (calibração)': {categoria:'Inspeção',tipo:'Data',repetirMeses:24,avisarDias:45},
+  'Carta de condução': {alvoTipo:'Motorista',categoria:'Documento',tipo:'Data',avisarDias:60},
+  'CAM (certificado de motorista)': {alvoTipo:'Motorista',categoria:'Documento',tipo:'Data',repetirMeses:60,avisarDias:60},
+  'Cartão de tacógrafo': {alvoTipo:'Motorista',categoria:'Documento',tipo:'Data',repetirMeses:60,avisarDias:60},
+  'Exame médico': {alvoTipo:'Motorista',categoria:'Documento',tipo:'Data',avisarDias:45}
+};
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtD = s => { const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (s||'—'); };
+const fmtKm = n => String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const fmtEur = n => Number(n||0).toLocaleString('pt-PT',{style:'currency',currency:'EUR'});
+const CLS = {'Vencido':'red','A vencer':'amber','OK':'green','Sem prazo':'grey'};
+const toISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const plate = m => `<span class="plate"><i>P</i><em>${esc(m)}</em></span>`;
+function addMonths(iso, m){
+  const [y,mo,d] = iso.split('-').map(Number);
+  const dt = new Date(y, mo-1+Number(m), d);
+  if (dt.getDate() !== d) dt.setDate(0);
+  return toISO(dt);
+}
+function daysAgo(iso){ const d = isoToDate(iso); return d ? Math.round((isoToDate(D.hoje) - d) / 864e5) : null; }
+const match = (q, ...f) => !q || f.join(' ').toLowerCase().includes(q.toLowerCase());
+
+function toast(msg, err){ const t = $('#toast'); t.textContent = msg; t.className = 'show' + (err ? ' err' : ''); clearTimeout(t._h); t._h = setTimeout(() => t.className = '', err ? 5000 : 2500); }
+const apply = msg => () => { if (msg) toast(msg); };
+async function run(fn, args, msg){ try { await call(fn, ...args); apply(msg)(); } catch(e){ toast(e.message || String(e), true); } }
+
+function go(tab, q){ TAB = tab; if (q !== undefined) Q[tab] = q; render(); window.scrollTo(0,0); }
+function render(){
+  if (!D) return;
+  $('#brand').textContent = D.config.nome;
+  document.title = D.config.nome;
+  $('#dl-nomes').innerHTML = Object.keys(PRESETS).map(n => `<option value="${esc(n)}">`).join('');
+  const urg = D.alertas.filter(a => a.rank <= 1).length;
+  $('#tabs').innerHTML = TABS.map(([k,l]) => `<button type="button" class="${TAB===k?'on':''}" onclick="go('${k}')">${l}${k==='painel'&&urg?`<span class="n">${urg}</span>`:''}</button>`).join('');
+  const active = document.activeElement, isSearch = active && active.classList.contains('search'), pos = isSearch ? active.selectionStart : 0;
+  ({painel:renderPainel, viaturas:renderViaturas, motoristas:renderMotoristas, alertas:renderRegras, historico:renderHistorico, definicoes:renderDefinicoes})[TAB]();
+  if (isSearch){ const s = $('.search'); if (s){ s.focus(); try { s.setSelectionRange(pos, pos); } catch(e){} } }
+}
+function toolbar(tab, ph, btn, fn){
+  return `<div class="toolbar"><input id="q-${tab}" class="search" type="search" placeholder="${esc(ph)}" value="${esc(Q[tab]||'')}" oninput="Q['${tab}']=this.value;LIST['${tab}']()">${btn?`<button type="button" class="btn go" onclick="${fn}">${btn}</button>`:''}</div>`;
+}
+const LIST = {};
+
+function detalhe(a){
+  const p = [];
+  if (a.dias !== null) p.push(a.dias < 0 ? `Venceu há ${-a.dias} dia(s), a ${fmtD(a.proximaData)}` : a.dias === 0 ? `Vence hoje, ${fmtD(a.proximaData)}` : `Vence em ${a.dias} dia(s), a ${fmtD(a.proximaData)}`);
+  if (a.kmRest !== null) p.push(a.kmRest <= 0 ? `Ultrapassado em ${fmtKm(-a.kmRest)} km (previsto aos ${fmtKm(a.proximoKm)} km)` : `Faltam ${fmtKm(a.kmRest)} km (aos ${fmtKm(a.proximoKm)} km)`);
+  if (!p.length) p.push(a.tipo !== 'Data' && a.alvoTipo === 'Viatura' && a.proximoKm !== '' ? 'A viatura não tem km registados. Atualize os km.' : 'Sem prazo definido.');
+  return p.join(' · ');
+}
+function intervalo(r){
+  const p = [];
+  if (r.repetirMeses) p.push(`a cada ${r.repetirMeses} meses`);
+  if (r.repetirKm) p.push(`a cada ${fmtKm(r.repetirKm)} km`);
+  return p.length ? 'Repete ' + p.join(' ou ') : 'Não repete';
+}
+const alvoHtml = r => r.alvoTipo === 'Viatura' ? plate(r.alvo) : '👤 ' + esc(r.alvo);
+function alertItem(a){
+  return `<div class="item ${CLS[a.estado]}">
+    <div class="row1"><span class="badge ${CLS[a.estado]}">${a.estado}</span><span class="ttl grow">${esc(a.nome)}</span>${alvoHtml(a)}</div>
+    <div class="when">${esc(detalhe(a))}</div>
+    <div class="actions">
+      <button type="button" class="btn sm" data-id="${esc(a.id)}" onclick="execForm(this.dataset.id)">✔ Registar como feito</button>
+      <button type="button" class="btn sm ghost" data-id="${esc(a.id)}" onclick="regraForm(this.dataset.id)">Editar alerta</button>
+    </div></div>`;
+}
+function worst(tipo, nome){
+  const l = D.alertas.filter(a => a.alvoTipo === tipo && a.alvo === nome);
+  if (!l.length) return '<span class="badge grey">Sem alertas</span>';
+  const n = l.filter(a => a.rank <= 1).length;
+  return `<span class="badge ${CLS[l[0].estado]}">${l[0].estado}${n>1?` · ${n}`:''}</span>`;
+}
+
+// ---------- PAINEL ----------
+function renderPainel(){
+  const A = D.alertas, venc = A.filter(a => a.rank === 0).length, av = A.filter(a => a.rank === 1).length;
+  const ativas = D.viaturas.filter(v => v.estado !== 'Inativa').length;
+  const desde = toISO(new Date(isoToDate(D.hoje).getTime() - 365*864e5));
+  const custo = D.registos.filter(r => r.data >= desde).reduce((s,r) => s + (Number(r.custo)||0), 0);
+  const kmVelhos = D.viaturas.filter(v => v.estado !== 'Inativa' && D.regras.some(r => r.alvoTipo === 'Viatura' && r.alvo === v.matricula && r.tipo !== 'Data' && isSim(r.ativo)) && (!v.kmData || daysAgo(v.kmData) > 30));
+  const lista = FILTRO === 'urgentes' ? A.filter(a => a.rank <= 1) : A;
+  let vazio;
+  if (!D.viaturas.length && !D.motoristas.length) vazio = `<div class="empty"><b>Comece pela sua primeira viatura</b>Registe a matrícula e os km atuais. Depois crie os alertas que quer controlar: inspeção, seguro, IUC, óleo, pneus ou os documentos dos motoristas.<div class="actions"><button type="button" class="btn go" onclick="viaturaForm()">+ Nova viatura</button><button type="button" class="btn ghost" onclick="motoristaForm()">+ Novo motorista</button></div></div>`;
+  else if (!D.regras.length) vazio = `<div class="empty"><b>Ainda sem alertas</b>Crie um alerta e escolha um modelo rápido, como a IPO ou a mudança de óleo. Pode aplicá-lo a várias viaturas de uma vez.<div class="actions"><button type="button" class="btn go" onclick="regraForm()">+ Novo alerta</button></div></div>`;
+  else vazio = `<div class="empty"><b>Tudo em dia</b>Nenhum alerta vencido nem a vencer.</div>`;
+
+  $('#main').innerHTML = `
+    <div class="stats">
+      <div class="stat red"><div class="v">${venc}</div><div class="l">Vencidos</div></div>
+      <div class="stat amber"><div class="v">${av}</div><div class="l">A vencer</div></div>
+      <div class="stat"><div class="v">${ativas}</div><div class="l">Viaturas ativas</div></div>
+      <div class="stat"><div class="v" style="font-size:24px">${fmtEur(custo)}</div><div class="l">Gastos em 12 meses</div></div>
+    </div>
+    ${kmVelhos.length ? `<div class="notice"><span class="grow">⚠️ Km por atualizar há mais de 30 dias em ${kmVelhos.map(v => `<a href="#" data-id="${esc(v.id)}" onclick="kmForm(this.dataset.id);return false">${esc(v.matricula)}</a>`).join(', ')}. Os alertas por km dependem destes valores.</span></div>` : ''}
+    <h2>Alertas</h2>
+    <div class="chips">
+      <button type="button" class="chip ${FILTRO==='urgentes'?'on':''}" onclick="FILTRO='urgentes';renderPainel()">Vencidos e a vencer</button>
+      <button type="button" class="chip ${FILTRO==='todos'?'on':''}" onclick="FILTRO='todos';renderPainel()">Todos (${A.length})</button>
+      <button type="button" class="chip" onclick="regraForm()">+ Novo alerta</button>
+    </div>
+    <div class="list">${lista.length ? lista.map(alertItem).join('') : vazio}</div>`;
+}
+
+// ---------- VIATURAS ----------
+function renderViaturas(){
+  $('#main').innerHTML = toolbar('viaturas','Pesquisar matrícula, marca, motorista…','+ Nova viatura','viaturaForm()') + '<div id="list" class="list"></div>';
+  LIST.viaturas();
+}
+LIST.viaturas = () => {
+  const l = D.viaturas.filter(v => match(Q.viaturas, v.matricula, v.marca, v.modelo, v.motorista, v.tipo)).sort((a,b) => a.matricula.localeCompare(b.matricula));
+  $('#list').innerHTML = l.length ? l.map(v => `
+    <div class="item">
+      <div class="row1">${plate(v.matricula)}<span class="grow muted">${esc([v.marca,v.modelo,v.ano].filter(Boolean).join(' · '))}</span>${worst('Viatura', v.matricula)}</div>
+      <div class="meta">
+        <span class="num">🛣️ ${v.kmAtual!==''?fmtKm(v.kmAtual)+' km':'km não registados'}${v.kmData?` <small>em ${fmtD(v.kmData)}</small>`:''}</span>
+        <span>👤 ${esc(v.motorista||'—')}</span>${v.tipo?`<span>${esc(v.tipo)}</span>`:''}<span>${esc(v.estado||'')}</span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn sm" data-id="${esc(v.id)}" onclick="kmForm(this.dataset.id)">Atualizar km</button>
+        <button type="button" class="btn sm ghost" data-m="${esc(v.matricula)}" onclick="regraForm(null,'Viatura',this.dataset.m)">+ Alerta</button>
+        <button type="button" class="btn sm ghost" data-m="${esc(v.matricula)}" onclick="registoForm(null,{alvoTipo:'Viatura',alvo:this.dataset.m})">+ Registo</button>
+        <button type="button" class="btn sm ghost" data-m="${esc(v.matricula)}" onclick="go('alertas',this.dataset.m)">Alertas</button>
+        <button type="button" class="btn sm ghost" data-m="${esc(v.matricula)}" onclick="go('historico',this.dataset.m)">Histórico</button>
+        <button type="button" class="btn sm ghost" data-id="${esc(v.id)}" onclick="viaturaForm(this.dataset.id)">Editar</button>
+        <button type="button" class="btn sm danger" data-id="${esc(v.id)}" data-m="${esc(v.matricula)}" onclick="apagar('Viaturas',this.dataset.id,'a viatura '+this.dataset.m,'Os alertas desta viatura também são apagados. O histórico mantém-se.')">Apagar</button>
+      </div></div>`).join('') : (D.viaturas.length ? '<div class="empty">Nenhuma viatura corresponde à pesquisa.</div>' : `<div class="empty"><b>Sem viaturas</b>Adicione a primeira viatura com a matrícula e os km atuais.<div class="actions"><button type="button" class="btn go" onclick="viaturaForm()">+ Nova viatura</button></div></div>`);
+};
+function viaturaForm(id){
+  const v = id ? D.viaturas.find(x => x.id === id) : {estado:'Ativa'};
+  openForm(id ? 'Editar viatura' : 'Nova viatura', [
+    {k:'matricula',label:'Matrícula',req:true,hint:'Ex.: AA-00-AA'},
+    {k:'tipo',label:'Tipo',type:'select',options:TIPOS_VIATURA},
+    {k:'marca',label:'Marca'},{k:'modelo',label:'Modelo'},
+    {k:'ano',label:'Ano',type:'number'},
+    {k:'kmAtual',label:'Km atuais',type:'number'},
+    {k:'motorista',label:'Motorista',type:'select',options:D.motoristas.map(m => m.nome)},
+    {k:'estado',label:'Estado',type:'select',options:['Ativa','Na oficina','Inativa'],blank:false},
+    {k:'notas',label:'Notas',type:'textarea',full:true}
+  ], v, o => { o.id = id || ''; return call('saveRecord','Viaturas',o).then(apply(id ? 'Viatura guardada' : 'Viatura criada. Já lhe pode adicionar alertas.')); });
+}
+function kmForm(id){
+  const v = D.viaturas.find(x => x.id === id);
+  openForm('Km · ' + v.matricula, [
+    {k:'km',label:'Km atuais (conta-quilómetros)',type:'number',req:true,full:true,hint: v.kmAtual !== '' ? `Último registo: ${fmtKm(v.kmAtual)} km em ${fmtD(v.kmData)}` : ''}
+  ], {km: v.kmAtual}, o => {
+    if (v.kmAtual !== '' && Number(toNum(o.km)) < Number(v.kmAtual) && !FORM.confirmado){
+      FORM.confirmado = true;
+      throw new Error('Este valor é inferior ao último registo. Carregue em Guardar outra vez para corrigir mesmo assim.');
+    }
+    return call('atualizarKm', v.matricula, o.km).then(apply('Km atualizados'));
+  });
+}
+
+// ---------- MOTORISTAS ----------
+function renderMotoristas(){
+  $('#main').innerHTML = toolbar('motoristas','Pesquisar nome, telefone, viatura…','+ Novo motorista','motoristaForm()') + '<div id="list" class="list"></div>';
+  LIST.motoristas();
+}
+LIST.motoristas = () => {
+  const l = D.motoristas.filter(m => match(Q.motoristas, m.nome, m.telefone, m.email, m.viatura)).sort((a,b) => a.nome.localeCompare(b.nome));
+  $('#list').innerHTML = l.length ? l.map(m => `
+    <div class="item">
+      <div class="row1"><span class="ttl grow">👤 ${esc(m.nome)}</span>${worst('Motorista', m.nome)}</div>
+      <div class="meta"><span class="num">📞 ${esc(m.telefone||'—')}</span><span>✉️ ${esc(m.email||'—')}</span><span>🚗 ${esc(m.viatura||'—')}</span><span>${esc(m.estado||'')}</span></div>
+      <div class="actions">
+        <button type="button" class="btn sm ghost" data-n="${esc(m.nome)}" onclick="regraForm(null,'Motorista',this.dataset.n)">+ Alerta de documento</button>
+        <button type="button" class="btn sm ghost" data-n="${esc(m.nome)}" onclick="go('alertas',this.dataset.n)">Alertas</button>
+        <button type="button" class="btn sm ghost" data-id="${esc(m.id)}" onclick="motoristaForm(this.dataset.id)">Editar</button>
+        <button type="button" class="btn sm danger" data-id="${esc(m.id)}" data-n="${esc(m.nome)}" onclick="apagar('Motoristas',this.dataset.id,this.dataset.n,'Os alertas deste motorista também são apagados.')">Apagar</button>
+      </div></div>`).join('') : (D.motoristas.length ? '<div class="empty">Nenhum motorista corresponde à pesquisa.</div>' : `<div class="empty"><b>Sem motoristas</b>Adicione motoristas para controlar a validade da carta, CAM, cartão de tacógrafo e exame médico.<div class="actions"><button type="button" class="btn go" onclick="motoristaForm()">+ Novo motorista</button></div></div>`);
+};
+function motoristaForm(id){
+  const m = id ? D.motoristas.find(x => x.id === id) : {estado:'Ativo'};
+  openForm(id ? 'Editar motorista' : 'Novo motorista', [
+    {k:'nome',label:'Nome',req:true,full:true},
+    {k:'telefone',label:'Telefone',type:'tel'},{k:'email',label:'Email',type:'email'},
+    {k:'numCarta',label:'Nº da carta de condução'},
+    {k:'viatura',label:'Viatura habitual',type:'select',options:D.viaturas.map(v => v.matricula)},
+    {k:'estado',label:'Estado',type:'select',options:['Ativo','Inativo'],blank:false},
+    {k:'notas',label:'Notas',type:'textarea',full:true}
+  ], m, o => { o.id = id || ''; return call('saveRecord','Motoristas',o).then(apply(id ? 'Motorista guardado' : 'Motorista criado. Adicione alertas para a carta, CAM, etc.')); });
+}
+
+// ---------- ALERTAS (REGRAS) ----------
+function renderRegras(){
+  $('#main').innerHTML = `<p class="lead">Cada alerta controla um prazo de uma viatura ou de um motorista: por data, por km ou pelo que chegar primeiro. Em cada um define com quanta antecedência quer ser avisado.</p>` +
+    toolbar('alertas','Pesquisar alerta, matrícula, motorista…','+ Novo alerta','regraForm()') + '<div id="list" class="list"></div>';
+  LIST.alertas();
+}
+LIST.alertas = () => {
+  const est = {}; D.alertas.forEach(a => est[a.id] = a);
+  const l = D.regras.filter(r => match(Q.alertas, r.nome, r.alvo, r.categoria, r.tipo)).sort((a,b) => (a.alvo + a.nome).localeCompare(b.alvo + b.nome));
+  $('#list').innerHTML = l.length ? l.map(r => {
+    const a = est[r.id];
+    const badge = a ? `<span class="badge ${CLS[a.estado]}">${a.estado}</span>` : '<span class="badge grey">Desativado</span>';
+    const prox = [r.tipo !== 'Km' && r.proximaData ? '📅 ' + fmtD(r.proximaData) : '', r.tipo !== 'Data' && r.proximoKm !== '' ? '🛣️ ' + fmtKm(r.proximoKm) + ' km' : ''].filter(Boolean).join(' · ');
+    const avisar = [r.tipo !== 'Km' ? `${r.avisarDias !== '' ? r.avisarDias : D.config.diasAviso} dias` : '', r.tipo !== 'Data' ? `${fmtKm(r.avisarKm !== '' ? r.avisarKm : D.config.kmAviso)} km` : ''].filter(Boolean).join(' / ');
+    return `<div class="item ${a ? CLS[a.estado] : ''}">
+      <div class="row1">${badge}<span class="ttl grow">${esc(r.nome)}</span>${alvoHtml(r)}</div>
+      <div class="meta"><span class="num">Próximo: ${prox || '—'}</span><span>${intervalo(r)}</span><span>Avisa ${avisar} antes</span></div>
+      ${a ? `<div class="when">${esc(detalhe(a))}</div>` : ''}
+      <div class="actions">
+        ${a ? `<button type="button" class="btn sm" data-id="${esc(r.id)}" onclick="execForm(this.dataset.id)">✔ Registar como feito</button>` : ''}
+        <button type="button" class="btn sm ghost" data-id="${esc(r.id)}" onclick="regraForm(this.dataset.id)">Editar</button>
+        <button type="button" class="btn sm danger" data-id="${esc(r.id)}" data-n="${esc(r.nome + ' · ' + r.alvo)}" onclick="apagar('Regras',this.dataset.id,'o alerta '+this.dataset.n)">Apagar</button>
+      </div></div>`;
+  }).join('') : (D.regras.length ? '<div class="empty">Nenhum alerta corresponde à pesquisa.</div>' : `<div class="empty"><b>Sem alertas</b>Crie o primeiro alerta. Os modelos rápidos já trazem intervalos típicos.<div class="actions"><button type="button" class="btn go" onclick="regraForm()">+ Novo alerta</button></div></div>`);
+};
+function regraForm(id, alvoTipoPre, alvoPre){
+  const novo = !id;
+  const r = id ? Object.assign({}, D.regras.find(x => x.id === id))
+    : {ativo:'Sim', alvoTipo:alvoTipoPre || 'Viatura', tipo:'Data', avisarDias:D.config.diasAviso, avisarKm:D.config.kmAviso, alvos: alvoPre ? [alvoPre] : []};
+  const alvoOpts = t => t === 'Motorista' ? D.motoristas.map(m => m.nome) : D.viaturas.map(v => v.matricula);
+  const alvoField = t => novo
+    ? {k:'alvos',label:t === 'Motorista' ? 'Motoristas' : 'Viaturas',type:'checks',options:alvoOpts(t),full:true,hint:'Pode escolher várias. É criado um alerta independente para cada uma.'}
+    : {k:'alvo',label:t,type:'select',options:alvoOpts(t),req:true,full:true};
+  const fields = [
+    ...(novo ? [{k:'modelo',label:'Modelo rápido (opcional)',type:'select',options:Object.keys(PRESETS),full:true,hint:'Preenche os campos com valores típicos. Confirme os intervalos para a sua frota.'}] : []),
+    {k:'alvoTipo',label:'Aplica-se a',type:'select',options:['Viatura','Motorista'],blank:false},
+    {k:'tipo',label:'Controlar por',type:'select',options:['Data','Km','Data e Km'],blank:false},
+    alvoField(r.alvoTipo),
+    {k:'nome',label:'Nome do alerta',req:true,list:'dl-nomes'},
+    {k:'categoria',label:'Categoria',type:'select',options:CATEGORIAS},
+    {k:'proximaData',label:'Próxima data / validade',type:'date',grp:'data'},
+    {k:'proximoKm',label:'Próximo aos km',type:'number',grp:'km'},
+    {k:'repetirMeses',label:'Repetir a cada (meses)',type:'number',grp:'data',hint:'Vazio = não repete'},
+    {k:'repetirKm',label:'Repetir a cada (km)',type:'number',grp:'km',hint:'Vazio = não repete'},
+    {k:'avisarDias',label:'Avisar quantos dias antes',type:'number',grp:'data'},
+    {k:'avisarKm',label:'Avisar quantos km antes',type:'number',grp:'km'},
+    {k:'ativo',label:'Ativo',type:'select',options:['Sim','Não'],blank:false},
+    {k:'notas',label:'Notas',type:'textarea',full:true}
+  ];
+  const vis = form => {
+    const at = form.elements.alvoTipo.value;
+    if (at === 'Motorista') form.elements.tipo.value = 'Data';
+    form.elements.tipo.disabled = at === 'Motorista';
+    const t = form.elements.tipo.value;
+    form.querySelectorAll('[data-grp="data"]').forEach(e => e.hidden = t === 'Km');
+    form.querySelectorAll('[data-grp="km"]').forEach(e => e.hidden = t === 'Data');
+  };
+  const rebuildAlvo = (form, t) => {
+    const f = alvoField(t), i = fields.findIndex(x => x.k === f.k); fields[i] = f;
+    form.querySelector(`[data-k="${f.k}"]`).outerHTML = fieldHtml(f, novo ? [] : '');
+  };
+  openForm(novo ? 'Novo alerta' : 'Editar alerta', fields, r, o => {
+    const t = o.alvoTipo === 'Motorista' ? 'Data' : (o.tipo || 'Data');
+    o.tipo = t;
+    if (t === 'Data'){ o.proximoKm = ''; o.repetirKm = ''; }
+    if (t === 'Km'){ o.proximaData = ''; o.repetirMeses = ''; }
+    if (novo){
+      const alvos = o.alvos; delete o.alvos; delete o.modelo;
+      if (!alvos.length) throw new Error('Escolha pelo menos ' + (o.alvoTipo === 'Motorista' ? 'um motorista.' : 'uma viatura.'));
+      validate('Regras', clean('Regras', Object.assign({}, o, {alvo:alvos[0]})), '');
+      return call('saveRegras', o, alvos).then(apply(alvos.length > 1 ? alvos.length + ' alertas criados' : 'Alerta criado'));
+    }
+    o.id = id;
+    return call('saveRecord','Regras',o).then(apply('Alerta guardado'));
+  }, (k, form) => {
+    if (k === 'alvoTipo') rebuildAlvo(form, form.elements.alvoTipo.value);
+    if (k === 'modelo'){
+      const nome = form.elements.modelo.value, p = PRESETS[nome]; if (!p) return;
+      const at = p.alvoTipo || 'Viatura';
+      if (form.elements.alvoTipo.value !== at){ form.elements.alvoTipo.value = at; rebuildAlvo(form, at); }
+      form.elements.nome.value = nome;
+      form.elements.categoria.value = p.categoria || '';
+      form.elements.tipo.value = p.tipo || 'Data';
+      ['repetirMeses','repetirKm'].forEach(x => form.elements[x].value = p[x] ?? '');
+      form.elements.avisarDias.value = p.avisarDias ?? D.config.diasAviso;
+      form.elements.avisarKm.value = p.avisarKm ?? D.config.kmAviso;
+    }
+    vis(form);
+  });
+}
+function execForm(rid){
+  const r = D.regras.find(x => x.id === rid);
+  const isV = r.alvoTipo === 'Viatura', v = isV ? D.viaturas.find(x => x.matricula === r.alvo) : null;
+  const usaData = r.tipo !== 'Km', usaKm = r.tipo !== 'Data' && isV;
+  const kmIni = v && v.kmAtual !== '' ? v.kmAtual : '';
+  const calc = (data, km) => ({
+    novaData: usaData && r.repetirMeses ? addMonths(data || D.hoje, r.repetirMeses) : '',
+    novoKm: usaKm && r.repetirKm && km !== '' ? Number(toNum(km)) + Number(r.repetirKm) : ''
+  });
+  const fields = [
+    {k:'data',label:'Data em que foi feito',type:'date',req:true},
+    ...(isV ? [{k:'km',label:'Km no momento',type:'number'}] : []),
+    {k:'custo',label:'Custo (€)',type:'number'},
+    {k:'fornecedor',label:isV ? 'Oficina / fornecedor' : 'Entidade'},
+    {k:'descricao',label:'Descrição (opcional)',full:true},
+    ...(usaData ? [{k:'novaData',label:isV ? 'Próxima data' : 'Nova validade',type:'date',hint:r.repetirMeses ? `Calculado: +${r.repetirMeses} meses. Pode alterar.` : 'Indique a nova data. Se ficar vazio, o alerta é desativado.'}] : []),
+    ...(usaKm ? [{k:'novoKm',label:'Próximo aos km',type:'number',hint:r.repetirKm ? `Calculado: +${fmtKm(r.repetirKm)} km. Pode alterar.` : 'Indique o próximo km. Se ficar vazio, deixa de controlar km.'}] : []),
+    {k:'notas',label:'Notas',type:'textarea',full:true}
+  ];
+  openForm(`${r.nome} · ${r.alvo}`, fields, Object.assign({data:D.hoje, km:kmIni}, calc(D.hoje, kmIni)), o => {
+    o.regraId = rid;
+    return call('registarExecucao', o).then(apply('Guardado no histórico. Próximo prazo agendado.'));
+  }, (k, form) => {
+    if (k !== 'data' && k !== 'km') return;
+    const c = calc(form.elements.data.value, form.elements.km ? form.elements.km.value : '');
+    if (form.elements.novaData && r.repetirMeses) form.elements.novaData.value = c.novaData;
+    if (form.elements.novoKm && r.repetirKm && c.novoKm !== '') form.elements.novoKm.value = c.novoKm;
+  });
+}
+
+// ---------- HISTÓRICO ----------
+function renderHistorico(){
+  $('#main').innerHTML = toolbar('historico','Pesquisar matrícula, categoria, oficina…','+ Novo registo','registoForm()') + '<div id="tot" class="total"></div><div id="list" class="list"></div>';
+  LIST.historico();
+}
+LIST.historico = () => {
+  const l = D.registos.filter(r => match(Q.historico, r.alvo, r.categoria, r.descricao, r.fornecedor, r.notas));
+  const tot = l.reduce((s,r) => s + (Number(r.custo)||0), 0);
+  $('#tot').textContent = `${l.length} registo(s) · Total ${fmtEur(tot)}`;
+  $('#list').innerHTML = l.length ? l.map(r => `
+    <div class="item">
+      <div class="row1"><b class="num">${fmtD(r.data)}</b><span class="badge grey">${esc(r.categoria||'—')}</span><span class="grow">${esc(r.descricao||'')}</span>${r.custo !== '' ? `<b class="num">${fmtEur(r.custo)}</b>` : ''}</div>
+      <div class="meta"><span>${alvoHtml(r)}</span>${r.km !== '' ? `<span class="num">🛣️ ${fmtKm(r.km)} km</span>` : ''}${r.fornecedor ? `<span>🔧 ${esc(r.fornecedor)}</span>` : ''}${r.notas ? `<span>${esc(r.notas)}</span>` : ''}</div>
+      <div class="actions">
+        <button type="button" class="btn sm ghost" data-id="${esc(r.id)}" onclick="registoForm(this.dataset.id)">Editar</button>
+        <button type="button" class="btn sm danger" data-id="${esc(r.id)}" onclick="apagar('Registos',this.dataset.id,'este registo')">Apagar</button>
+      </div></div>`).join('') : `<div class="empty"><b>Sem registos</b>Aqui fica tudo o que foi feito: manutenções, inspeções, reparações e custos. Quando marca um alerta como feito, o registo é criado automaticamente.</div>`;
+};
+function registoForm(id, pre){
+  const r = id ? D.registos.find(x => x.id === id) : Object.assign({data:D.hoje, alvoTipo:'Viatura', categoria:'Manutenção'}, pre || {});
+  const alvoField = t => ({k:'alvo',label:t,type:'select',options:t === 'Motorista' ? D.motoristas.map(m => m.nome) : D.viaturas.map(v => v.matricula),req:true});
+  const fields = [
+    {k:'data',label:'Data',type:'date',req:true},
+    {k:'categoria',label:'Categoria',type:'select',options:CATEGORIAS},
+    {k:'alvoTipo',label:'Refere-se a',type:'select',options:['Viatura','Motorista'],blank:false},
+    alvoField(r.alvoTipo),
+    {k:'descricao',label:'Descrição',full:true},
+    {k:'km',label:'Km',type:'number',hint:'Se for superior aos km atuais, atualiza a viatura.'},
+    {k:'custo',label:'Custo (€)',type:'number'},
+    {k:'fornecedor',label:'Fornecedor / oficina',full:true},
+    {k:'notas',label:'Notas',type:'textarea',full:true}
+  ];
+  openForm(id ? 'Editar registo' : 'Novo registo', fields, r, o => {
+    o.id = id || '';
+    return call('saveRecord','Registos',o).then(apply('Registo guardado'));
+  }, (k, form) => {
+    if (k !== 'alvoTipo') return;
+    const f = alvoField(form.elements.alvoTipo.value); fields[3] = f;
+    form.querySelector('[data-k="alvo"]').outerHTML = fieldHtml(f, '');
+  });
+}
+
+// ---------- DEFINIÇÕES ----------
+function renderDefinicoes(){
+  const c = D.config;
+  const f = [
+    {k:'nome',label:'Nome da frota ou empresa',full:true},
+    {k:'diasAviso',label:'Dias de aviso por defeito',type:'number',hint:'Usado nos alertas por data sem antecedência própria.'},
+    {k:'kmAviso',label:'Km de aviso por defeito',type:'number',hint:'Usado nos alertas por km sem antecedência própria.'}
+  ];
+  $('#main').innerHTML = `
+    <h2 style="margin-top:0">Definições</h2>
+    <div class="panel"><form id="cfg">
+      <div class="grid">${f.map(x => fieldHtml(x, c[x.k])).join('')}</div>
+      <div class="mfoot"><button class="btn go" type="submit">Guardar definições</button></div>
+    </form></div>
+    <h2>Instalar no telemóvel</h2>
+    <div class="panel">${
+      standalone() ? '<p style="margin:0">✅ A app já está instalada neste dispositivo.</p>'
+      : INSTALL_EVT ? '<p style="margin:0 0 10px">Instale a app para a abrir pelo ícone, em ecrã inteiro.</p><button type="button" class="btn go" onclick="instalar()">Instalar app</button>'
+      : isIOS() ? '<p style="margin:0">No iPhone: abra esta página no <b>Safari</b>, toque em <b>Partilhar</b> (quadrado com seta) e escolha <b>Adicionar ao ecrã principal</b>.</p>'
+      : '<p style="margin:0">No Android: abra no <b>Chrome</b>, toque nos <b>três pontinhos ⋮</b> e escolha <b>Instalar app</b> ou <b>Adicionar ao ecrã principal</b>.</p>'
+    }</div>
+    <h2>Avisos</h2>
+    <div class="panel">
+      <p style="margin:0 0 10px">Quando abre a app, recebe um aviso no telemóvel com o que está vencido ou a vencer (no máximo um por dia).${isIOS() ? ' No iPhone, só funciona com a app instalada no ecrã principal.' : ''}</p>
+      ${!('Notification' in window) ? '<p class="muted" style="margin:0">Este navegador não permite avisos.</p>'
+        : Notification.permission === 'granted' ? '<p style="margin:0">✅ Avisos ativados neste dispositivo.</p>'
+        : Notification.permission === 'denied' ? '<p class="muted" style="margin:0">Os avisos estão bloqueados. Ative-os nas definições do navegador para este site.</p>'
+        : '<button type="button" class="btn go" onclick="ativarAvisos()">Ativar avisos</button>'}
+    </div>
+    <h2>Acesso da equipa</h2>
+    <div class="panel">
+      <p style="margin:0">Só entram na app as pessoas desta lista e o administrador. Cada pessoa cria a sua conta no ecrã de entrada com o mesmo email.</p>
+      <div class="acc">${ACESSO.length ? ACESSO.map(e => `<div><span>${esc(e)}</span><button type="button" class="btn sm danger" data-e="${esc(e)}" onclick="removerAcesso(this.dataset.e)">Remover</button></div>`).join('') : '<p class="muted" style="margin:0">Ainda não adicionou ninguém.</p>'}</div>
+      <form id="accForm" class="inline"><input id="accEmail" type="email" placeholder="email@exemplo.pt" required><button class="btn" type="submit">Dar acesso</button></form>
+    </div>
+    <h2>Conta</h2>
+    <div class="panel inline" style="align-items:center"><span class="grow" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(AUTH && AUTH.currentUser ? AUTH.currentUser.email : '')}</span><button type="button" class="btn ghost" onclick="AUTH.signOut()">Sair</button></div>`;
+  $('#cfg').onsubmit = e => { e.preventDefault(); run('saveConfig', [collect(e.target, f)], 'Definições guardadas'); };
+  $('#accForm').onsubmit = e => {
+    e.preventDefault();
+    const em = $('#accEmail').value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return toast('Escreva um email válido.', true);
+    if (ACESSO.includes(em)) return toast('Esse email já tem acesso.', true);
+    run('saveAcesso', [[...ACESSO, em]], 'Acesso dado a ' + em);
+  };
+}
+function removerAcesso(em){
+  confirmar('Remover o acesso de ' + em + '?', 'Esta pessoa deixa de conseguir abrir a frota.', 'Remover', () => call('saveAcesso', ACESSO.filter(x => x !== em)).then(apply('Acesso removido')));
+}
+
+function apagar(entity, id, desc, extra){
+  confirmar('Apagar ' + desc + '?', extra || 'Esta ação não pode ser anulada.', 'Apagar', () => call('deleteRecord', entity, id).then(apply('Apagado')));
+}
+function confirmar(titulo, texto, botao, acao){
+  $('#mtitle').textContent = titulo;
+  const form = $('#mform');
+  form.innerHTML = `<div class="confirm"><p>${esc(texto)}</p></div><div class="mfoot"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn danger" type="submit">${esc(botao)}</button></div>`;
+  FORM = {fields:[], onSubmit:acao};
+  form.onchange = null;
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const b = form.querySelector('[type=submit]'); b.disabled = true;
+    try { await acao(); closeModal(); } catch(err){ toast(err.message || String(err), true); b.disabled = false; }
+  };
+  $('#modal').hidden = false;
+}
+
+// ---------- formulários ----------
+function fieldHtml(f, v){
+  const id = 'f_' + f.k, req = f.req ? ' required' : '';
+  let inp;
+  if (f.type === 'select'){
+    const opts = [...f.options]; if (v !== '' && v !== undefined && v !== null && !opts.includes(String(v))) opts.unshift(String(v));
+    inp = `<select id="${id}" name="${f.k}"${req}>${f.blank === false ? '' : '<option value=""></option>'}${opts.map(o => `<option${String(o) === String(v ?? '') ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  } else if (f.type === 'textarea'){
+    inp = `<textarea id="${id}" name="${f.k}">${esc(v)}</textarea>`;
+  } else if (f.type === 'checks'){
+    const sel = Array.isArray(v) ? v : [];
+    inp = `<div class="checks" id="${id}">${f.options.length ? f.options.map((o,i) => `<label><input type="checkbox" id="${id}_${i}" name="${f.k}" value="${esc(o)}"${sel.includes(o) ? ' checked' : ''}> ${esc(o)}</label>`).join('') : '<em class="muted">Ainda não há registos. Crie-os primeiro.</em>'}</div>`;
+  } else {
+    inp = `<input id="${id}" name="${f.k}" type="${f.type || 'text'}" value="${esc(v)}"${f.type === 'number' ? ' step="any" inputmode="decimal"' : ''}${f.list ? ` list="${f.list}"` : ''}${req}>`;
+  }
+  return `<div class="field${f.full ? ' full' : ''}" data-k="${f.k}"${f.grp ? ` data-grp="${f.grp}"` : ''}><label for="${id}">${esc(f.label)}${f.req ? ' *' : ''}</label>${inp}${f.hint ? `<small>${esc(f.hint)}</small>` : ''}</div>`;
+}
+function collect(form, fields){
+  const o = {};
+  fields.forEach(f => {
+    if (f.type === 'checks') o[f.k] = [...form.querySelectorAll(`input[name="${f.k}"]:checked`)].map(x => x.value);
+    else { const el = form.elements[f.k]; o[f.k] = el ? String(el.value).trim() : ''; }
+  });
+  return o;
+}
+function openForm(title, fields, values, onSubmit, onChange){
+  $('#mtitle').textContent = title;
+  const form = $('#mform');
+  form.innerHTML = `<div class="grid">${fields.map(f => fieldHtml(f, (values || {})[f.k])).join('')}</div>
+    <div class="mfoot"><button type="button" class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn go" type="submit">Guardar</button></div>`;
+  FORM = {fields, onSubmit, onChange};
+  form.onchange = e => { if (FORM && FORM.onChange && e.target.name) FORM.onChange(e.target.name, form); };
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const btn = form.querySelector('[type=submit]'); btn.disabled = true;
+    try { await FORM.onSubmit(collect(form, FORM.fields)); closeModal(); }
+    catch(err){ toast(err.message || String(err), true); }
+    finally { btn.disabled = false; }
+  };
+  $('#modal').hidden = false;
+  if (onChange) onChange('__init', form);
+  const first = form.querySelector('input:not([type=checkbox]),select');
+  if (first && window.innerWidth > 700) first.focus();
+}
+function closeModal(){ $('#modal').hidden = true; FORM = null; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+ligacao();
+init();
+</script>
+</body>
+</html>
+

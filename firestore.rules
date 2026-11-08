@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// REGRAS DE SEGURANÇA DA GESTÃO DE FROTA
+// Antes de publicar, troque O_SEU_EMAIL@gmail.com (linha marcada) pelo email do administrador,
+// em minúsculas. O administrador entra sempre e é o único que gere a lista de acesso.
+// As restantes pessoas só entram se o email estiver na lista (Definições → Acesso da equipa)
+// e se tiverem confirmado o email.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function entrou() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function admin() {
+      return entrou() && request.auth.token.email.lower() == 'o_seu_email@gmail.com'; // <-- TROCAR
+    }
+
+    function membro() {
+      return admin() || (entrou()
+        && exists(/databases/$(database)/documents/config/acesso)
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/acesso).data.emails);
+    }
+
+    // Lista de acesso: toda a equipa vê, só o administrador altera.
+    match /config/acesso {
+      allow read: if membro();
+      allow write: if admin();
+    }
+
+    // Definições gerais (nome da frota, antecedências por defeito).
+    match /config/geral {
+      allow read, write: if membro();
+    }
+
+    // Dados da frota.
+    match /viaturas/{id}   { allow read, write: if membro(); }
+    match /motoristas/{id} { allow read, write: if membro(); }
+    match /regras/{id}     { allow read, write: if membro(); }
+    match /registos/{id}   { allow read, write: if membro(); }
+
+    // Tudo o resto fica fechado.
+  }
+}
