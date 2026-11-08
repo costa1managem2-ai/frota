@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gestão de Frota</title>
+<title>Frota · Mestre das Chaves</title>
 <meta name="description" content="Viaturas, manutenções, inspeções e alertas da frota.">
-<meta name="theme-color" content="#17324f">
+<meta name="theme-color" content="#1d1d1b">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="icon" href="logo.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20,7 +20,7 @@
   /* Layout: oficina — barra fixa em azul-asfalto com separadores, lista de "fichas" por viatura com faixa de estado à esquerda. */
   :root{
     --bg:#eef1f4; --surface:#ffffff; --surface2:#f6f8fa; --ink:#18212d; --muted:#5f6b7a; --line:#d9dfe6; --field:#c9d1db;
-    --brand:#17324f; --brand-ink:#ffffff; --brand-soft:#b9c8da; --accent:#e8a33d; --accent-ink:#1b1408; --focus:#2f6db3;
+    --brand:#1d1d1b; --brand-ink:#ffffff; --brand-soft:#cfc8b6; --accent:#dab025; --accent-ink:#1b1606; --focus:#2f6db3;
     --red:#b8352a; --red-bg:#fbe9e7; --amber:#9a6208; --amber-bg:#fdf1dc; --green:#1d7a45; --green-bg:#e3f4ea; --grey:#6b7684; --grey-bg:#eceff2;
     --plate-bg:#ffffff; --plate-ink:#111; --eu:#1f4fa8; --scrim:rgba(10,20,32,.5);
     --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
@@ -30,12 +30,12 @@
   }
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
     --bg:#0f151c; --surface:#18212b; --surface2:#1e2934; --ink:#e6ebf1; --muted:#9aa7b5; --line:#2a3644; --field:#364557;
-    --brand:#0b1824; --brand-ink:#f1f5f9; --brand-soft:#8fa4ba; --accent:#f0b354; --accent-ink:#1b1408; --focus:#6ea3e0;
+    --brand:#0e0e0d; --brand-ink:#f4f1ea; --brand-soft:#b3ac9b; --accent:#e4bd3c; --accent-ink:#1b1606; --focus:#6ea3e0;
     --red:#ef7a6e; --red-bg:#3a1d1a; --amber:#f0b354; --amber-bg:#3a2c13; --green:#5fcf8f; --green-bg:#16301f; --grey:#9aa7b5; --grey-bg:#26313c;
     --plate-bg:#f3f3f3; --plate-ink:#111; --eu:#2b5fc0; --scrim:rgba(0,0,0,.6); color-scheme:dark }}
   :root[data-theme="dark"]{
     --bg:#0f151c; --surface:#18212b; --surface2:#1e2934; --ink:#e6ebf1; --muted:#9aa7b5; --line:#2a3644; --field:#364557;
-    --brand:#0b1824; --brand-ink:#f1f5f9; --brand-soft:#8fa4ba; --accent:#f0b354; --accent-ink:#1b1408; --focus:#6ea3e0;
+    --brand:#0e0e0d; --brand-ink:#f4f1ea; --brand-soft:#b3ac9b; --accent:#e4bd3c; --accent-ink:#1b1606; --focus:#6ea3e0;
     --red:#ef7a6e; --red-bg:#3a1d1a; --amber:#f0b354; --amber-bg:#3a2c13; --green:#5fcf8f; --green-bg:#16301f; --grey:#9aa7b5; --grey-bg:#26313c;
     --plate-bg:#f3f3f3; --plate-ink:#111; --eu:#2b5fc0; --scrim:rgba(0,0,0,.6); color-scheme:dark }
 
@@ -48,7 +48,7 @@
     padding-block:calc(24px + env(safe-area-inset-top,0px)) 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .auth .box{background:var(--surface);border-radius:14px;padding:24px 22px;width:100%;max-width:400px;box-shadow:0 14px 40px rgba(0,0,0,.3)}
   .auth .logo{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-  .auth .logo img{width:52px;height:52px;border-radius:12px}
+  .auth .logo img{width:64px;height:64px;border-radius:12px;background:#fff;border:1px solid var(--line);padding:3px;flex:none}
   .auth .logo b{font:700 26px/1 var(--display);text-transform:uppercase;letter-spacing:.5px;display:block}
   .auth .logo span{color:var(--muted);font-size:13px}
   .auth form{display:flex;flex-direction:column;gap:12px}
@@ -68,7 +68,8 @@
   header{background:var(--brand);color:var(--brand-ink);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;
     padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .hwrap{max-width:1000px;margin:0 auto}
-  .brand{display:flex;align-items:baseline;gap:10px;padding-block:12px 2px}
+  .brand{display:flex;align-items:center;gap:10px;padding-block:12px 2px}
+  .brand .mark{width:34px;height:34px;border-radius:7px;background:#fff;padding:2px;align-self:center;flex:none}
   .brand b{font:700 24px/1 var(--display);letter-spacing:.5px;text-transform:uppercase}
   .brand span{color:var(--brand-soft);font-size:13px}
   nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0 -8px}
@@ -159,7 +160,7 @@
 
 <section id="auth" class="auth" hidden>
   <div class="box">
-    <div class="logo"><img src="icon-192.png" alt=""><div><b id="authBrand">Gestão de Frota</b><span>manutenção · inspeções · alertas</span></div></div>
+    <div class="logo"><img src="logo.png" alt="Logotipo"><div><b id="authBrand">Mestre das Chaves</b><span>Gestão de frota</span></div></div>
     <div id="authBody"></div>
   </div>
 </section>
@@ -167,7 +168,7 @@
 <div id="app" hidden>
 <header>
   <div class="hwrap">
-    <div class="brand"><b id="brand">Gestão de Frota</b><span class="who" id="who"></span></div>
+    <div class="brand"><img class="mark" src="logo.png" alt=""><b id="brand">Mestre das Chaves</b><span class="who" id="who"></span></div>
     <nav id="tabs"></nav>
   </div>
 </header>
@@ -376,7 +377,7 @@ function calcularAlertas(regras, viaturas, cfg){
 function refresh(){
   if (LOADED.size < 5) return;
   const c = RAW.config || {};
-  const cfg = {nome: c.nome || 'Gestão de Frota', diasAviso: c.diasAviso === '' || c.diasAviso === undefined ? 30 : Number(c.diasAviso), kmAviso: c.kmAviso === '' || c.kmAviso === undefined ? 1000 : Number(c.kmAviso)};
+  const cfg = {nome: c.nome || 'Mestre das Chaves', diasAviso: c.diasAviso === '' || c.diasAviso === undefined ? 30 : Number(c.diasAviso), kmAviso: c.kmAviso === '' || c.kmAviso === undefined ? 1000 : Number(c.kmAviso)};
   const pad = list => list.map(x => { const o = Object.assign({}, x); return o; });
   D = {
     viaturas: pad(RAW.viaturas), motoristas: pad(RAW.motoristas), regras: pad(RAW.regras),
