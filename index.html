@@ -441,6 +441,7 @@ function loginView(mode, msg){
         ${mode === 'login' ? `<button type="button" class="linkbtn" onclick="loginView('signup')">Criar conta</button><button type="button" class="linkbtn" onclick="loginView('reset')">Esqueci-me da palavra-passe</button>`
                            : `<button type="button" class="linkbtn" onclick="loginView('login')">Voltar a entrar</button>`}
       </div>
+      <div class="links"><a class="linkbtn" href="privacidade.html" style="text-decoration:none">Política de privacidade</a></div>
     </form>`);
   $('#authForm').onsubmit = async e => {
     e.preventDefault();
