@@ -1,7 +1,7 @@
 // Service worker: permite instalar a app e abri-la sem internet.
 // Ao alterar ficheiros da app, aumente o número da versão para os telemóveis atualizarem.
-const VERSAO = 'frota-v2';
-const APP = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo.png'];
+const VERSAO = 'frota-v3';
+const APP = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'logo.png', 'privacidade.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSAO).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
